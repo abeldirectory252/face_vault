@@ -100,8 +100,8 @@ class FaceEngine:
                 bbox=bbox,
                 landmarks=f.kps if hasattr(f, "kps") else None,
                 det_score=float(f.det_score),
-                age=int(f.age) if hasattr(f, "age") else None,
-                gender=int(f.gender) if hasattr(f, "gender") else None,
+                age=int(f.age) if hasattr(f, "age") and f.age is not None else None,
+                gender=int(f.gender) if hasattr(f, "gender") and f.gender is not None else None,
                 aligned_face=aligned,
             ))
 
@@ -162,8 +162,8 @@ class FaceEngine:
                 bbox=bbox,
                 landmarks=f.kps if hasattr(f, "kps") else None,
                 det_score=float(f.det_score),
-                age=int(f.age) if hasattr(f, "age") else None,
-                gender=int(f.gender) if hasattr(f, "gender") else None,
+                age=int(f.age) if hasattr(f, "age") and f.age is not None else None,
+                gender=int(f.gender) if hasattr(f, "gender") and f.gender is not None else None,
                 aligned_face=aligned,
             )
 

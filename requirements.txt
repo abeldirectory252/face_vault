@@ -1,0 +1,8 @@
+# FaceVault — dependencies
+insightface>=0.7
+onnxruntime>=1.14
+opencv-python>=4.8
+numpy>=1.24
+scipy>=1.10
+faiss-cpu>=1.7
+Pillow>=9.0

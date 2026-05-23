@@ -4,7 +4,7 @@
 
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/YOUR_USERNAME/face_vault/blob/main/notebook/face_vault_colab.ipynb)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/abeldirectory252/face_vault/blob/main/notebook/face_vault_colab.ipynb)
 
 FaceVault is a library-structured Python package for face detection, recognition, and anti-spoofing. It wraps InsightFace (RetinaFace + ArcFace) with a FAISS vector database and a 5-method anti-spoofing ensemble into a clean, production-ready API.
 
@@ -32,7 +32,7 @@ FaceVault is a library-structured Python package for face detection, recognition
 
 ```bash
 # Clone the repo
-git clone https://github.com/YOUR_USERNAME/face_vault.git
+git clone https://github.com/abeldirectory252/face_vault.git
 cd face_vault
 
 # Install dependencies
@@ -253,11 +253,13 @@ face_vault/
 │   ├── vault.py            # Main FaceVault orchestrator
 │   └── utils.py            # Image loading, stamping, drawing
 ├── dataset/                # Per-user reference images
-│   ├── OGH-00238/
-│   │   ├── face1.jpg
-│   │   └── face2.jpg
-│   └── OGH-00100/
-│       └── photo.jpg
+│   ├── OGH-00013/          # Sumaya Kedir Jemel (8 images)
+│   ├── OGH-00044/          # Meklit Ayele Woldeyes (8 images)
+│   ├── OGH-00238/          # Afiya Kelifa Ahimed (7 images)
+│   └── Test/               # 10 unknown test images
+│       ├── unk1.png
+│       ├── unk2.png
+│       └── ...
 ├── img/                    # Stamp overlay images
 │   ├── verified.png
 │   ├── fake.png

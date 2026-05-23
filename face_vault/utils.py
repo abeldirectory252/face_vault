@@ -349,15 +349,29 @@ def _compose_side_by_side(
     A vertical divider bar separates the two.
     """
     import os
+    from pathlib import Path
 
-    # Load reference image
-    if not os.path.isfile(reference_path):
-        logger.warning("Reference image not found: %s", reference_path)
+    _EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".tif", ".webp"}
+
+    ref_file = None
+    p = Path(reference_path)
+
+    if p.is_file():
+        ref_file = str(p)
+    elif p.is_dir():
+        # Pick the first image from the folder
+        for f in sorted(p.iterdir()):
+            if f.is_file() and f.suffix.lower() in _EXTS:
+                ref_file = str(f)
+                break
+
+    if ref_file is None:
+        logger.warning("No reference image found at: %s", reference_path)
         return probe
 
-    ref = cv2.imread(reference_path)
+    ref = cv2.imread(ref_file)
     if ref is None:
-        logger.warning("Cannot read reference image: %s", reference_path)
+        logger.warning("Cannot read reference image: %s", ref_file)
         return probe
 
     h_probe, w_probe = probe.shape[:2]

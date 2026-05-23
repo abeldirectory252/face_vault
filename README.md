@@ -287,9 +287,11 @@ face_vault/
 
 ## 🧪 Colab
 
+https://github.com/abeldirectory252/face_vault.git
+
 Try the interactive demo:
 
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/YOUR_USERNAME/face_vault/blob/main/notebook/face_vault_colab.ipynb)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/abeldirectory252/face_vault/blob/main/notebook/face_vault_colab.ipynb)
 
 ---
 

@@ -194,6 +194,7 @@ class FaceVault:
             success, identity, images_registered, message
         """
         # ── Resolve images ─────────────────────────
+        print(f"[FaceVault] Resolving reference images for '{full_name}' ({user_code})...")
         if reference_image is None:
             # Auto-discover from dataset/<user_code>/
             user_dir = self.dataset_dir / user_code
@@ -206,6 +207,8 @@ class FaceVault:
                 )
         else:
             image_paths = _collect_images(reference_image)
+
+        print(f"[FaceVault] Found {len(image_paths)} source image(s) for registration.")
 
         # ── Ensure dataset folder exists ───────────
         user_dir = self.dataset_dir / user_code
@@ -235,35 +238,44 @@ class FaceVault:
         errors: List[str] = []
 
         for img_path in normalised_paths:
+            print(f"[FaceVault] Processing: {img_path.name}...")
             img_hash = _image_hash(img_path)
 
             # Check for duplicates
             if self.db.has_image_hash(img_hash):
-                errors.append(f"Duplicate image skipped: {img_path.name}")
+                msg = f"Duplicate image skipped: {img_path.name}"
+                print(f"  [!] {msg}")
+                errors.append(msg)
                 continue
 
             img = load_image(str(img_path))
+            print(f"  [-] Running face detection & embedding extraction...")
             embeddings = self.engine.detect_and_embed(img)
 
             if not embeddings:
-                errors.append(f"No face detected: {img_path.name}")
+                msg = f"No face detected: {img_path.name}"
+                print(f"  [!] {msg}")
+                errors.append(msg)
                 continue
 
             emb = embeddings[0]  # largest face
+            print(f"  [+] Face found! Detection score (quality): {emb.quality:.4f}")
 
             # Anti-spoofing
             spoof_result = None
             if self.spoofer and emb.face.aligned_face is not None:
+                print(f"  [-] Running anti-spoofing check...")
                 spoof_result = self.spoofer.check(emb.face.aligned_face)
                 last_spoof = spoof_result
+                print(f"  [+] Anti-spoof verdict: {spoof_result.verdict.name} (score={spoof_result.score:.4f})")
                 if self.spoof_block and spoof_result.verdict == SpoofVerdict.FAKE:
-                    errors.append(
-                        f"Spoof rejected: {img_path.name} "
-                        f"(score={spoof_result.score:.3f})"
-                    )
+                    msg = f"Spoof rejected: {img_path.name} (score={spoof_result.score:.3f})"
+                    print(f"  [!] {msg}")
+                    errors.append(msg)
                     continue
 
             try:
+                print(f"  [-] Saving vector embedding to database...")
                 last_identity = self.db.register(
                     user_code=user_code,
                     name=full_name,
@@ -274,13 +286,16 @@ class FaceVault:
                     reference_image_path=ref_path,
                 )
                 registered += 1
+                print(f"  [✓] Successfully registered embedding from {img_path.name}!")
             except ValueError as e:
+                print(f"  [!] Database error: {e}")
                 errors.append(str(e))
 
         if registered == 0:
             msg = "No images registered."
             if errors:
                 msg += " Errors: " + "; ".join(errors)
+            print(f"[FaceVault] Registration Failed: {msg}")
             return RegisterResult(
                 success=False,
                 num_faces_found=0,
@@ -289,13 +304,17 @@ class FaceVault:
                 message=msg,
             )
 
+        num_vectors = last_identity.num_vectors if last_identity else 0
+        remaining = max(0, 10 - num_vectors)
         msg = (
             f"Registered '{full_name}' [{user_code}] — "
-            f"{registered} image(s), {last_identity.num_vectors} total vectors."
+            f"{registered} image(s), {num_vectors} total vectors. "
+            f"({remaining} remaining to reach 10-vector baseline)"
         )
         if errors:
             msg += f"  Warnings: {'; '.join(errors)}"
 
+        print(f"[FaceVault] Registration Completed! {msg}")
         return RegisterResult(
             success=True,
             identity=last_identity,
@@ -371,20 +390,26 @@ class FaceVault:
         self, image: Union[str, np.ndarray], top_k: int = 1,
         image_overlay: bool = False, reference_image: bool = False,
     ) -> IdentifyWithResult:
+        print("[FaceVault] Starting identification (Mode: DETECT_WITH_IDENTITY)...")
         t0 = time.perf_counter()
         img = load_image(image)
+        
+        print("  [-] Extracting face embedding...")
         embeddings = self.engine.detect_and_embed(img)
 
         if not embeddings:
+            print("  [!] No faces detected in input image.")
             return IdentifyWithResult(
                 matched=False, elapsed_ms=self._elapsed(t0),
             )
 
         emb = embeddings[0]
+        print(f"  [+] Face found with detection score: {emb.quality:.4f}")
 
         # Anti-spoofing
         sr = self._check_spoof(emb)
         if sr and self.spoof_block and sr.verdict == SpoofVerdict.FAKE:
+            print(f"  [🚨] Spoofing attempt blocked! Verdict: FAKE (score={sr.score:.4f})")
             self.db.log_access(None, 0, True, sr.score)
             elapsed = self._elapsed(t0)
             stamped = None
@@ -400,13 +425,18 @@ class FaceVault:
                 elapsed_ms=elapsed, image=stamped,
             )
 
+        if sr:
+            print(f"  [✓] Anti-spoof check passed: {sr.verdict.name} (score={sr.score:.4f})")
+
         # Full DB search
+        print("  [-] Searching full database for matching vectors...")
         hits = self.db.search(
             emb.vector, top_k=top_k, threshold=self.match_threshold,
         )
 
         if hits and hits[0].is_match:
             best = hits[0]
+            print(f"  [✓] MATCH FOUND: '{best.identity.name}' [{best.identity.user_code}] (similarity={best.similarity:.4f})")
             self.db.log_access(
                 best.identity.id, best.similarity, False,
                 sr.score if sr else 0,
@@ -437,6 +467,7 @@ class FaceVault:
             )
 
         # No match
+        print("  [!] No matching identity found in database.")
         self.db.log_access(None, 0, False, sr.score if sr else 0)
         elapsed = self._elapsed(t0)
         stamped = None
@@ -465,20 +496,26 @@ class FaceVault:
                 "user_code is required for DETECT_WITHOUT_IDENTITY mode."
             )
 
+        print(f"[FaceVault] Starting targeted verification for employee: {user_code}...")
         t0 = time.perf_counter()
         img = load_image(image)
+        
+        print("  [-] Extracting face embedding...")
         embeddings = self.engine.detect_and_embed(img)
 
         if not embeddings:
+            print("  [!] No faces detected in input image.")
             return IdentifyWithoutResult(
                 matched=False, elapsed_ms=self._elapsed(t0),
             )
 
         emb = embeddings[0]
+        print(f"  [+] Face found with detection score: {emb.quality:.4f}")
 
         # Anti-spoofing
         sr = self._check_spoof(emb)
         if sr and self.spoof_block and sr.verdict == SpoofVerdict.FAKE:
+            print(f"  [🚨] Spoofing attempt blocked! Verdict: FAKE (score={sr.score:.4f})")
             self.db.log_access(None, 0, True, sr.score)
             elapsed = self._elapsed(t0)
             stamped = None
@@ -494,7 +531,11 @@ class FaceVault:
                 elapsed_ms=elapsed, image=stamped,
             )
 
+        if sr:
+            print(f"  [✓] Anti-spoof check passed: {sr.verdict.name} (score={sr.score:.4f})")
+
         # Targeted search — only this user's vectors
+        print(f"  [-] Comparing face embedding against baseline for {user_code}...")
         result = self.db.search_by_identity(
             emb.vector,
             user_code=user_code,
@@ -522,6 +563,11 @@ class FaceVault:
                 confidence=result.similarity,
                 user_code=user_code, elapsed_ms=elapsed,
             )
+
+        if result.is_match:
+            print(f"  [✓] VERIFIED: Match found! similarity = {result.similarity:.4f} (threshold = {self.match_threshold})")
+        else:
+            print(f"  [!] MISMATCH: Similarity ({result.similarity:.4f}) is below threshold ({self.match_threshold})")
 
         return IdentifyWithoutResult(
             matched=result.is_match,

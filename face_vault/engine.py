@@ -76,6 +76,29 @@ class FaceEngine:
 
         self.model_root = model_root
 
+        # Ensure that if the model zip file was manually uploaded, it gets extracted correctly.
+        # This avoids re-downloading from the web on offline or slow servers.
+        models_dir = model_root / "models"
+        target_dir = models_dir / model_pack
+        zip_sources = [
+            model_root / f"{model_pack}.zip",
+            models_dir / f"{model_pack}.zip"
+        ]
+
+        if not target_dir.exists() or not any(target_dir.iterdir()):
+            for zip_path in zip_sources:
+                if zip_path.is_file():
+                    logger.info("Found manual model zip at %s. Extracting to %s...", zip_path, target_dir)
+                    target_dir.mkdir(parents=True, exist_ok=True)
+                    import zipfile
+                    try:
+                        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                            zip_ref.extractall(target_dir)
+                        logger.info("Successfully extracted %s to %s", zip_path, target_dir)
+                        break
+                    except Exception as zip_err:
+                        logger.error("Failed to extract manual zip file %s: %s", zip_path, zip_err)
+
         try:
             self._app = FaceAnalysis(
                 name=model_pack,

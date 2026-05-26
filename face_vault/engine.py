@@ -74,6 +74,8 @@ class FaceEngine:
             else:
                 model_root = proj_root / "model"
 
+        self.model_root = model_root
+
         try:
             self._app = FaceAnalysis(
                 name=model_pack,

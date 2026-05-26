@@ -133,6 +133,25 @@ class FaceVault:
             self.dataset_dir = Path(db_path).parent / "dataset"
         self.dataset_dir.mkdir(parents=True, exist_ok=True)
 
+        # Startup Banner
+        from . import __version__
+        banner = r"""
+  ___          __   __         _ _   
+ | __|_ _ __ __\ \ / /_ _ _  _| | |_ 
+ | _/ _` / _/ -_) V / _` | || | |  _|
+ |_|\__,_\__\___|\_/\__,_|\_,_|_|\__|
+                                     
+ Created at Think Lab
+ Created by Abel Yohannes
+""" + (
+            f" Version:            {__version__}\n"
+            f" DB Path:            {self.db.db_path.resolve()}\n"
+            f" Dataset Directory:  {self.dataset_dir.resolve()}\n"
+            f" Model Directory:    {self.engine.model_root / 'models' / model_pack}\n"
+            f" Pip Install Command: pip install git+https://github.com/abeldirectory252/face_vault.git\n"
+        )
+        print(banner)
+
     # ──────────────────────────────────────────────
     # Registration
     # ──────────────────────────────────────────────

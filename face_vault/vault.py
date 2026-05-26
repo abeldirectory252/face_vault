@@ -112,9 +112,15 @@ class FaceVault:
         anti_spoof: bool = True,
         spoof_block: bool = True,
         model_pack: str = "buffalo_l",
+        model_dir: Optional[Union[str, Path]] = None,
     ):
-        self.engine = FaceEngine(ctx_id=ctx_id, det_size=det_size,
-                                 det_thresh=det_thresh, model_pack=model_pack)
+        self.engine = FaceEngine(
+            ctx_id=ctx_id,
+            det_size=det_size,
+            det_thresh=det_thresh,
+            model_pack=model_pack,
+            model_dir=model_dir,
+        )
         self.db = FaceDatabase(db_path=db_path)
         self.spoofer = AntiSpoof() if anti_spoof else None
         self.match_threshold = match_threshold

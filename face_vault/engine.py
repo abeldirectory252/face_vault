@@ -62,12 +62,36 @@ class FaceEngine:
             )
 
         self._det_thresh = det_thresh
-        self._app = FaceAnalysis(
-            name=model_pack,
-            allowed_modules=["detection", "recognition"],
-            providers=self._get_providers(),
-        )
-        self._app.prepare(ctx_id=ctx_id, det_size=det_size)
+        try:
+            self._app = FaceAnalysis(
+                name=model_pack,
+                allowed_modules=["detection", "recognition"],
+                providers=self._get_providers(),
+            )
+            self._app.prepare(ctx_id=ctx_id, det_size=det_size)
+        except (AssertionError, Exception) as e:
+            logger.warning(
+                "Failed to initialize FaceAnalysis with model pack '%s' (Error: %s). "
+                "Attempting to clear corrupted model download and retry...",
+                model_pack, e
+            )
+            model_dir = Path.home() / ".insightface" / "models" / model_pack
+            if model_dir.exists():
+                try:
+                    logger.info("Removing corrupted model directory: %s", model_dir)
+                    import shutil
+                    shutil.rmtree(model_dir, ignore_errors=True)
+                except Exception as clean_err:
+                    logger.error("Failed to remove corrupted model directory %s: %s", model_dir, clean_err)
+            
+            # Retry initializing after cleaning up
+            self._app = FaceAnalysis(
+                name=model_pack,
+                allowed_modules=["detection", "recognition"],
+                providers=self._get_providers(),
+            )
+            self._app.prepare(ctx_id=ctx_id, det_size=det_size)
+
         logger.info(
             "FaceEngine ready  (pack=%s, det_size=%s, ctx_id=%d)",
             model_pack, det_size, ctx_id,

@@ -13,6 +13,8 @@ Usage:
     python demo.py list
     python demo.py webcam
     python demo.py remove OGH-00238
+    python demo.py unregister OGH-00238
+    python demo.py clean
 """
 import argparse
 import sys

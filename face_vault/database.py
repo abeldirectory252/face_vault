@@ -354,6 +354,16 @@ class FaceDatabase:
         self._rebuild_index()
         return True
 
+    def clear(self):
+        """Wipe all tables in the database and rebuild the FAISS index."""
+        cur = self._conn.cursor()
+        cur.execute("DELETE FROM face_vectors")
+        cur.execute("DELETE FROM access_log")
+        cur.execute("DELETE FROM identities")
+        self._conn.commit()
+        self._rebuild_index()
+
+
     def list_identities(self) -> List[Identity]:
         """List all registered identities."""
         rows = self._conn.execute(

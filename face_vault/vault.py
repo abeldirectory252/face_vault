@@ -669,6 +669,65 @@ class FaceVault:
     def remove_identity(self, user_code: str) -> bool:
         return self.db.remove_identity(user_code)
 
+    def unregister(self, user_code: str, clean_images: bool = True) -> bool:
+        """
+        Unregister (remove) an identity and all its face vectors by user_code.
+        
+        Parameters
+        ----------
+        user_code : str
+            Unique user code of the identity to remove.
+        clean_images : bool, default True
+            If True, also deletes the user's associated image directory from dataset_dir.
+        """
+        removed = self.db.remove_identity(user_code)
+        if clean_images:
+            user_dir = self.dataset_dir / user_code
+            if user_dir.exists() and user_dir.is_dir():
+                try:
+                    shutil.rmtree(user_dir)
+                    print(f"[FaceVault] Cleaned up dataset folder: {user_dir}")
+                except Exception as e:
+                    logger.warning(f"Failed to clean up dataset folder {user_dir}: {e}")
+                    print(f"[FaceVault] Warning: Failed to clean up dataset folder {user_dir}: {e}")
+        return removed
+
+    def deregister(self, user_code: str, clean_images: bool = True) -> bool:
+        """Alias for unregister."""
+        return self.unregister(user_code, clean_images=clean_images)
+
+    def clear(self, clean_images: bool = True) -> None:
+        """
+        Wipe the database completely (identities, vectors, access logs)
+        and optionally clean all files/folders inside the dataset directory.
+        
+        Parameters
+        ----------
+        clean_images : bool, default True
+            If True, also deletes all files and directories inside dataset_dir.
+        """
+        print("[FaceVault] Clearing database...")
+        self.db.clear()
+        
+        if clean_images and self.dataset_dir.exists():
+            print(f"[FaceVault] Cleaning dataset directory: {self.dataset_dir}")
+            for item in self.dataset_dir.iterdir():
+                if item.is_dir():
+                    try:
+                        shutil.rmtree(item)
+                    except Exception as e:
+                        logger.warning(f"Failed to delete directory {item}: {e}")
+                elif item.is_file():
+                    try:
+                        item.unlink()
+                    except Exception as e:
+                        logger.warning(f"Failed to delete file {item}: {e}")
+        print("[FaceVault] Clear operation completed successfully.")
+
+    def clean(self, clean_images: bool = True) -> None:
+        """Alias for clear."""
+        self.clear(clean_images=clean_images)
+
     def stats(self):
         return self.db.get_stats()
 
